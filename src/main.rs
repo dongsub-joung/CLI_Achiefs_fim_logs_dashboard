@@ -61,23 +61,22 @@ fn main() {
     };
 
     fn rotate_event_logs() -> io::Result<()> {
-        let source_path = "events.json";
-
+        
         // 1. Generate the filename with the current date: e.g., 2026-04-26_logs.json
         let date_str = Local::now().format("%Y-%m-%d").to_string();
         let destination_path = format!("{}_logs.json", date_str);
 
         // Check if source exists before trying to copy
-        if Path::new(source_path).exists() {
+        if Path::new(JSON_PATH).exists() {
             // 2. Copy the file to the new dated log
-            fs::copy(source_path, &destination_path)?;
+            fs::copy(JSON_PATH, &destination_path)?;
             println!("Successfully backed up to {}", destination_path);
 
             // 3. Overwrite/Clear the original file (makes it 0 bytes)
             // If you'd rather delete it entirely, use fs::remove_file(source_path)?;
-            fs::write(source_path, "")?;
+            fs::write(JSON_PATH, "")?;
         } else {
-            println!("Source file {} does not exist. Skipping.", source_path);
+            println!("Source file {} does not exist. Skipping.", JSON_PATH);
         }
 
         Ok(())
@@ -115,7 +114,8 @@ fn main() {
 
         let _result_data = result_v_events(data);
 
-        let recent_events = get_latest_json_lines(JSON_PATH, 2);
+        // It mean get latest 2 Json data
+        let recent_events = get_latest_json_lines(JSON_PATH, 2_usize);
 
         print_json_data_pretty(&recent_events);
 
