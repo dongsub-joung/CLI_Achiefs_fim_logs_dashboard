@@ -1,7 +1,7 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs::{self, File, read};
 
-#[derive(Deserialize, Debug)]
+#[derive(serde::Serialize, Deserialize, Debug)]
 struct ChangedEvent {
     detailed_operation: &'static str,
     files: &'static str,
@@ -16,35 +16,6 @@ struct ChangedEvent {
 
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
 
-fn read_json_data() -> Result<Vec<ChangedEvent>, serde_json::Error> {
-    // {
-        let opened_file = File::open(JSON_PATH);
-        let file = match opened_file {
-            Ok(_file) => _file,
-            Err(e) => {
-                panic!("{e}")
-            }
-        };
-
-        let buf_reader = std::io::BufReader::new(file);
-
-        let v_events = serde_json::Deserializer::from_reader(buf_reader);
-        
-
-    // }
-
-    // & life time problme
-    {
-        // @TODO need to caching or read only last data
-        let data = fs::read_to_string(JSON_PATH).expect("msg");
-
-        let v_events: Vec<ChangedEvent> = serde_json::from_str(&data)?;
-
-    }
-
-    Ok(v_events)
-}
-
 fn print_json_data(v_events: &Vec<ChangedEvent>) {
     for event in v_events {
         println!("");
@@ -56,7 +27,12 @@ fn get_file_size() {}
 
 fn main() {
     loop {
-        let v_events = read_json_data();
+        let result_v_events = || -> Result<Vec<ChangedEvent>, serde_json::Error> {
+            let data = fs::read_to_string(JSON_PATH).expect("msg");
+            let v_events: Vec<ChangedEvent> = serde_json::from_str(data.as_str())?;
+
+            Ok(v_events)
+        };
 
         match v_events {
             Ok(event) => {
