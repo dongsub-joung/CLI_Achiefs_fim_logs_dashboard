@@ -23,18 +23,20 @@ struct ChangedEvent {
 
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
 
+// for fn print_all_data
+fn print_json_data_pretty(v_events: &Vec<ChangedEvent>) {
+    match serde_json::to_string_pretty(v_events) {
+        Ok(json_str) => println!("{}", json_str),
+        Err(e) => eprintln!("Failed to serialize for printing: {}", e),
+    }
+}
+
 fn main() {
     let result_v_events = |data: String| -> Result<Vec<ChangedEvent>, serde_json::Error> {
         let v_events: Vec<ChangedEvent> = serde_json::from_str(&data)?;
 
         Ok(v_events)
     };
-    fn print_json_data_pretty(v_events: &Vec<ChangedEvent>) {
-        match serde_json::to_string_pretty(v_events) {
-            Ok(json_str) => println!("{}", json_str),
-            Err(e) => eprintln!("Failed to serialize for printing: {}", e),
-        }
-    }
 
     let get_file_size = |json_path: &'static str| -> io::Result<u64> {
         // metadata() fetches file information from the OS
@@ -119,8 +121,7 @@ fn main() {
 
         let file_size = get_file_size(JSON_PATH).expect("failed get a log file size");
         if file_size >= 20048000000_u64 {
-            // @TODO sleep fim process for unblcok
-            fim_process_sleep_for_backup()
+            fim_process_sleep_for_backup();
         }
 
         std::process::exit(0);
@@ -129,12 +130,6 @@ fn main() {
 
 // Options
 fn print_all_data(result_data: &Result<Vec<ChangedEvent>, serde_json::Error>) {
-    let print_json_data_pretty =
-        |v_events: &Vec<ChangedEvent>| match serde_json::to_string_pretty(v_events) {
-            Ok(json_str) => println!("{}", json_str),
-            Err(e) => eprintln!("Failed to serialize for printing: {}", e),
-        };
-
     match result_data {
         Ok(event) => {
             print_json_data_pretty(event);
