@@ -1,9 +1,12 @@
+use std::env;
 use chrono::Local;
+use std::path::Path;
+use nix::unistd::Pid;
 use rev_lines::RevLines;
-use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{self, BufReader};
-use std::path::Path;
+use serde::{Deserialize, Serialize};
+use nix::sys::signal::{Signal, kill};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ChangedEvent {
@@ -26,11 +29,13 @@ fn main() {
 
         Ok(v_events)
     };
-    let print_json_data_pretty =
-        |v_events: &Vec<ChangedEvent>| match serde_json::to_string_pretty(v_events) {
+    fn print_json_data_pretty(v_events: &Vec<ChangedEvent>) {
+        match serde_json::to_string_pretty(v_events) {
             Ok(json_str) => println!("{}", json_str),
             Err(e) => eprintln!("Failed to serialize for printing: {}", e),
-        };
+        }
+    }
+
     let get_file_size = |json_path: &'static str| -> io::Result<u64> {
         // metadata() fetches file information from the OS
         let metadata = fs::metadata(json_path)?;
@@ -39,7 +44,21 @@ fn main() {
         Ok(metadata.len())
     };
 
-    let rotate_event_logs = || -> io::Result<()> {
+    let get_latest_json_lines = |json_path: &str, limit: usize| -> Vec<ChangedEvent> {
+        let file = File::open(json_path).expect("Could not open file");
+        let rev_lines = RevLines::new(BufReader::new(file));
+
+        // Take the last 'limit' lines and parse them
+        rev_lines
+            .take(limit)
+            .filter_map(|line| {
+                let line_str = line.ok()?;
+                serde_json::from_str::<ChangedEvent>(&line_str).ok()
+            })
+            .collect()
+    };
+
+    fn rotate_event_logs() -> io::Result<()> {
         let source_path = "events.json";
 
         // 1. Generate the filename with the current date: e.g., 2026-04-26_logs.json
@@ -60,24 +79,36 @@ fn main() {
         }
 
         Ok(())
-    };
-    let get_latest_json_lines = |json_path: &str, limit: usize| -> Vec<ChangedEvent> {
-        let file = File::open(json_path).expect("Could not open file");
-        let rev_lines = RevLines::new(BufReader::new(file));
+    }
+    fn fim_process_sleep_for_backup() {
+        let args: Vec<String> = env::args().collect();
 
-        // Take the last 'limit' lines and parse them
-        rev_lines
-            .take(limit)
-            .filter_map(|line| {
-                let line_str = line.ok()?;
-                serde_json::from_str::<ChangedEvent>(&line_str).ok()
-            })
-            .collect()
-    };
+        let string_pid = &args[1];
+        let pid_raw = string_pid
+            .parse::<u32>()
+            .expect("Not a valid number. Plz input PID");
+
+        let pid = nix::unistd::Pid::from_raw(pid_raw);
+
+        match kill(pid, Signal::SIGSTOP) {
+            Ok(_) => println!("Daemon {} paused.", pid_raw),
+            Err(e) => eprintln!("Failed to pause: {}", e),
+        }
+
+        let result_backup= rotate_event_logs();
+        match result_backup {
+            Err(e) => { panic!("failed to backup process"); },
+            Ok(()) => { }
+        };
+
+        match kill(pid, Signal::SIGCONT) {
+            Ok(_) => println!("Daemon {} resumed.", pid_raw),
+            Err(e) => eprintln!("Failed to resume: {}", e),
+        }
+    }
 
     // init
     loop {
-        // @TODO I need to get a few of data(lastest)
         let data: String = fs::read_to_string(JSON_PATH).expect("failed to find path");
 
         let _result_data = result_v_events(data);
@@ -89,7 +120,7 @@ fn main() {
         let file_size = get_file_size(JSON_PATH).expect("failed get a log file size");
         if file_size >= 20048000000_u64 {
             // @TODO sleep fim process for unblcok
-            let _ = rotate_event_logs();
+            fim_process_sleep_for_backup()
         }
 
         std::process::exit(0);
