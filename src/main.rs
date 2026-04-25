@@ -3,15 +3,15 @@ use std::fs::{self, File, read};
 
 #[derive(serde::Serialize, Deserialize, Debug)]
 struct ChangedEvent {
-    detailed_operation: &'static str,
-    files: &'static str,
+    detailed_operation: String,
+    files: String,
     file_size: usize,
     fpid: usize,
-    hostname: &'static str,
-    labels: &'static str,
-    operation: &'static str,
-    system: &'static str,
-    timestamp: &'static str,
+    hostname: String,
+    labels: String,
+    operation: String,
+    system: String,
+    timestamp: String,
 }
 
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
@@ -23,18 +23,20 @@ fn print_json_data(v_events: &Vec<ChangedEvent>) {
 }
 
 // @TODO
-fn get_file_size() {}
+fn get_file_size() -> usize {
+    1
+}
 
 fn main() {
-    loop {
-        let result_v_events = || -> Result<Vec<ChangedEvent>, serde_json::Error> {
-            let data = fs::read_to_string(JSON_PATH).expect("msg");
-            let v_events: Vec<ChangedEvent> = serde_json::from_str(data.as_str())?;
-
-            Ok(v_events)
-        };
-
-        match v_events {
+    let result_v_events = |data: String| -> Result<Vec<ChangedEvent>, serde_json::Error> {
+        let v_events: Vec<ChangedEvent> = serde_json::from_str(&data)?;
+        
+        Ok(v_events)
+    };
+    
+    loop {    
+        let data: String = fs::read_to_string(JSON_PATH).expect("msg");
+        match result_v_events(data) {
             Ok(event) => {
                 print_json_data(&event);
             }
