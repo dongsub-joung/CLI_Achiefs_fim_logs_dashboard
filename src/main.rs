@@ -9,30 +9,34 @@ use nix::sys::signal::{Signal, kill};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ChangedEvent {
+    checksum: String,
     detailed_operation: String,
-    files: String,
+    file: String,
     file_size: usize,
     fpid: usize,
     hostname: String,
-    labels: String,
+    id: String,
+    labels: [String; 2],
+    node: String,
     operation: String,
     system: String,
     timestamp: String,
+    version: String,
 }
 
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
 
 // for fn print_all_data
-fn print_json_data_pretty(v_events: &Vec<ChangedEvent>) {
+fn print_json_data_pretty(v_events: &ChangedEvent) {
     match serde_json::to_string_pretty(v_events) {
-        Ok(json_str) => println!("{}", json_str),
+        Ok(json_str) => println!("{:#?}", json_str),
         Err(e) => eprintln!("Failed to serialize for printing: {}", e),
     }
 }
 
 fn main() {
-    let result_v_events = |data: String| -> Result<Vec<ChangedEvent>, serde_json::Error> {
-        let v_events: Vec<ChangedEvent> = serde_json::from_str(&data)?;
+    let result_v_events = |data: String| -> Result<ChangedEvent, serde_json::Error> {
+        let v_events: ChangedEvent= serde_json::from_str(&data)?;
 
         Ok(v_events)
     };
@@ -114,21 +118,21 @@ fn main() {
         let _result_data = result_v_events(data);
 
         // It mean get latest 2 Json data
-        let recent_events = get_latest_json_lines(JSON_PATH, 2_usize);
-
-        print_json_data_pretty(&recent_events);
-
+        // let recent_events = get_latest_json_lines(JSON_PATH, 2_usize);
+        
+        // print_json_data_pretty(&recent_events);
+        
+        print_all_data(&_result_data);
+        
         let file_size = get_file_size(JSON_PATH).expect("failed get a log file size");
         if file_size >= 20048000000_u64 {
             fim_process_sleep_for_backup();
         }
-
-        std::process::exit(0);
     }
 }
 
 // Options
-fn print_all_data(result_data: &Result<Vec<ChangedEvent>, serde_json::Error>) {
+fn print_all_data(result_data: &Result<ChangedEvent, serde_json::Error>) {
     match result_data {
         Ok(event) => {
             print_json_data_pretty(event);
