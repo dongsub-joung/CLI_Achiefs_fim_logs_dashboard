@@ -27,8 +27,8 @@ struct ChangedEvent {
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
 
 // for fn print_all_data
-fn print_json_data_pretty(v_events: &ChangedEvent) {
-    match serde_json::to_string_pretty(v_events) {
+fn print_json_data_pretty(event: &ChangedEvent) {
+    match serde_json::to_string_pretty(event) {
         Ok(json_str) => println!("{:#?}", json_str),
         Err(e) => eprintln!("Failed to serialize for printing: {}", e),
     }
@@ -49,18 +49,30 @@ fn main() {
         Ok(metadata.len())
     };
 
-    let get_latest_json_lines = |json_path: &str, limit: usize| -> Vec<ChangedEvent> {
+    let get_latest_json_lines = |json_path: &str, limit: usize| -> ChangedEvent {
         let file = File::open(json_path).expect("Could not open file");
         let rev_lines = RevLines::new(BufReader::new(file));
+        let mut obj_event: Option<ChangedEvent>;
 
         // Take the last 'limit' lines and parse them
         rev_lines
             .take(limit)
             .filter_map(|line| {
                 let line_str = line.ok()?;
+                
                 serde_json::from_str::<ChangedEvent>(&line_str).ok()
-            })
-            .collect()
+            }
+        );
+        
+        // TODO make this as fn
+        for e in result_v_events {
+            
+        }
+
+        match obj_event {
+            Some(obj) => return obj,
+            _ => panic!("Event object is null")
+        }
     };
 
     fn rotate_event_logs() -> io::Result<()> {
@@ -117,12 +129,12 @@ fn main() {
 
         let _result_data = result_v_events(data);
 
-        // It mean get latest 2 Json data
-        // let recent_events = get_latest_json_lines(JSON_PATH, 2_usize);
+        // get latest 1 Json data as struct ChangedEvent
+        let recent_events = get_latest_json_lines(JSON_PATH, 1_usize);
         
-        // print_json_data_pretty(&recent_events);
+        print_json_data_pretty(&recent_events);
         
-        print_all_data(&_result_data);
+        // print_all_data(&_result_data);
         
         let file_size = get_file_size(JSON_PATH).expect("failed get a log file size");
         if file_size >= 20048000000_u64 {
