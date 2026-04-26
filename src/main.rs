@@ -1,7 +1,6 @@
 use std::env;
 use chrono::Local;
 use std::path::Path;
-use nix::unistd::Pid;
 use rev_lines::RevLines;
 use std::fs::{self, File};
 use std::io::{self, BufReader};
@@ -86,7 +85,7 @@ fn main() {
 
         let string_pid = &args[1];
         let pid_raw = string_pid
-            .parse::<u32>()
+            .parse::<i32>()
             .expect("Not a valid number. Plz input PID");
 
         let pid = nix::unistd::Pid::from_raw(pid_raw);
