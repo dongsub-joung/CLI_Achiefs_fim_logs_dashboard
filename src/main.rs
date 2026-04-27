@@ -1,7 +1,5 @@
-use std::env;
-use std::iter::Map;
+use std::{env, path::Path};
 use chrono::Local;
-use std::path::Path;
 use rev_lines::RevLines;
 use std::fs::{self, File};
 use std::io::{self, BufReader};
@@ -24,7 +22,7 @@ struct ChangedEvent {
     timestamp: String,
     version: String,
     
-    #[serde(flatten)]
+    #[serde(flatten), derive(serde::Serialize), derive(serde::Deserialize)]
     extra_fields: Map<String, String>
 }
 
@@ -67,8 +65,8 @@ fn main() {
                 serde_json::from_str::<ChangedEvent>(&line_str).ok()
             }
         );
+
         // @TODO unwrap rev_lines: ReLinesMBufReader<File>>
-        
         for e in result_v_events {
             
         }
