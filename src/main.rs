@@ -1,4 +1,5 @@
- , use std::env;
+use std::env;
+use std::iter::Map;
 use chrono::Local;
 use std::path::Path;
 use rev_lines::RevLines;
@@ -24,7 +25,7 @@ struct ChangedEvent {
     version: String,
     
     #[serde(flatten)]
-    extra_fields: Map<String, Value>
+    extra_fields: Map<String, String>
 }
 
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
@@ -66,8 +67,8 @@ fn main() {
                 serde_json::from_str::<ChangedEvent>(&line_str).ok()
             }
         );
+        // @TODO unwrap rev_lines: ReLinesMBufReader<File>>
         
-        // TODO make this as fn
         for e in result_v_events {
             
         }
