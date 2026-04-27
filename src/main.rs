@@ -1,4 +1,4 @@
-use std::env;
+ , use std::env;
 use chrono::Local;
 use std::path::Path;
 use rev_lines::RevLines;
@@ -22,6 +22,9 @@ struct ChangedEvent {
     system: String,
     timestamp: String,
     version: String,
+    
+    #[serde(flatten)]
+    extra_fields: Map<String, Value>
 }
 
 const JSON_PATH: &'static str = "/var/lib/fim/events.json";
